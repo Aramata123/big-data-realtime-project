@@ -42,6 +42,8 @@ public class ExchangeRatePublisher {
         Instant timestamp = Instant.now();
         List<ExchangeRate> publishedRates = new ArrayList<>();
 
+        messageProducer.sendMessage(topic, toJson(response));
+
         response.rates().forEach((devise, taux) -> {
             ExchangeRate exchangeRate = new ExchangeRate(
                     response.base(),
@@ -53,14 +55,13 @@ public class ExchangeRatePublisher {
                     taux.multiply(REFERENCE_AMOUNT_USD).setScale(2, RoundingMode.HALF_UP),
                     timestamp
             );
-            messageProducer.sendMessage(topic, toJson(exchangeRate));
             publishedRates.add(exchangeRate);
         });
 
         return publishedRates;
     }
 
-    private String toJson(ExchangeRate exchangeRate) {
+    private String toJson(Object exchangeRate) {
         try {
             return objectMapper.writeValueAsString(exchangeRate);
         } catch (JsonProcessingException exception) {

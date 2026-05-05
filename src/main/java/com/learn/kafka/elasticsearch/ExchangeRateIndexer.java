@@ -42,18 +42,26 @@ public class ExchangeRateIndexer {
 
     private Map<String, Object> toDocument(String kafkaMessage) {
         try {
+            String now = Instant.now().toString();
             Map<String, Object> document = objectMapper.readValue(
                     kafkaMessage,
                     new TypeReference<LinkedHashMap<String, Object>>() {
                     }
             );
-            document.putIfAbsent("indexedAt", Instant.now().toString());
+            document.putIfAbsent("@timestamp", now);
+            document.putIfAbsent("indexedAt", now);
+            Object apiTimestamp = document.get("time_last_updated_utc");
+            if (apiTimestamp != null) {
+                document.putIfAbsent("timestamp", apiTimestamp);
+            }
             return document;
         } catch (Exception exception) {
+            String now = Instant.now().toString();
             Map<String, Object> document = new LinkedHashMap<>();
             document.put("id", UUID.randomUUID().toString());
             document.put("rawMessage", kafkaMessage);
-            document.put("indexedAt", Instant.now().toString());
+            document.put("@timestamp", now);
+            document.put("indexedAt", now);
             document.put("parsingError", exception.getMessage());
             return document;
         }
