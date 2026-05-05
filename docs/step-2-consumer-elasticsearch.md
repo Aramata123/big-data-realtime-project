@@ -6,7 +6,7 @@ Cette partie correspond au travail cote consommateur :
 
 1. Lire les messages Kafka du topic `exchange-rates`.
 2. Parser le message JSON envoye par le producteur.
-3. Indexer chaque message dans Elasticsearch.
+3. Indexer chaque message dans Elasticsearch dans l'index `forex-data`.
 4. Valider la visualisation dans Kibana.
 
 ## Configuration
@@ -15,7 +15,7 @@ Cette partie correspond au travail cote consommateur :
 spring.kafka.bootstrap-servers=localhost:9092
 spring.kafka.consumer.group-id=exchange-rate-indexer
 exchange.kafka.topic=exchange-rates
-exchange.elasticsearch.index=exchange-rates
+exchange.elasticsearch.index=forex-data
 spring.elasticsearch.uris=http://localhost:9200
 ```
 
@@ -44,14 +44,14 @@ Le consumer accepte un message JSON envoye par le producer, par exemple :
 }
 ```
 
-Chaque message est indexe dans Elasticsearch dans l'index `exchange-rates`.
+Chaque message est indexe dans Elasticsearch dans l'index `forex-data`.
 
 ## Dashboard Kibana
 
 1. Ouvrir Kibana sur `http://localhost:5601`.
 2. Aller dans `Stack Management`.
 3. Aller dans `Data Views`.
-4. Creer un data view `exchange-rates`.
+4. Creer un index pattern `forex-data*`.
 5. Choisir `indexedAt` comme champ temporel si Kibana le propose.
 6. Creer une visualisation avec le taux par devise dans le temps.
 
