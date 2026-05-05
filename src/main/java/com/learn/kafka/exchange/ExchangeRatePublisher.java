@@ -6,6 +6,8 @@ import com.learn.kafka.producer.MessageProducer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -13,6 +15,8 @@ import java.util.Objects;
 
 @Service
 public class ExchangeRatePublisher {
+
+    private static final BigDecimal REFERENCE_AMOUNT_USD = BigDecimal.valueOf(100);
 
     private final ExchangeRateApiClient apiClient;
     private final MessageProducer messageProducer;
@@ -39,7 +43,16 @@ public class ExchangeRatePublisher {
         List<ExchangeRate> publishedRates = new ArrayList<>();
 
         response.rates().forEach((devise, taux) -> {
-            ExchangeRate exchangeRate = new ExchangeRate(devise, taux, timestamp);
+            ExchangeRate exchangeRate = new ExchangeRate(
+                    response.base(),
+                    devise,
+                    currencyName(devise),
+                    currencyZone(devise),
+                    taux,
+                    inverseRate(taux),
+                    taux.multiply(REFERENCE_AMOUNT_USD).setScale(2, RoundingMode.HALF_UP),
+                    timestamp
+            );
             messageProducer.sendMessage(topic, toJson(exchangeRate));
             publishedRates.add(exchangeRate);
         });
@@ -53,5 +66,40 @@ public class ExchangeRatePublisher {
         } catch (JsonProcessingException exception) {
             throw new IllegalStateException("Unable to serialize exchange rate", exception);
         }
+    }
+
+    private BigDecimal inverseRate(BigDecimal taux) {
+        if (BigDecimal.ZERO.compareTo(taux) == 0) {
+            return BigDecimal.ZERO;
+        }
+        return BigDecimal.ONE.divide(taux, 6, RoundingMode.HALF_UP);
+    }
+
+    private String currencyName(String currencyCode) {
+        return switch (currencyCode) {
+            case "USD" -> "Dollar americain";
+            case "EUR" -> "Euro";
+            case "XOF" -> "Franc CFA BCEAO";
+            case "XAF" -> "Franc CFA BEAC";
+            case "GBP" -> "Livre sterling";
+            case "CAD" -> "Dollar canadien";
+            case "CHF" -> "Franc suisse";
+            case "JPY" -> "Yen japonais";
+            default -> currencyCode;
+        };
+    }
+
+    private String currencyZone(String currencyCode) {
+        return switch (currencyCode) {
+            case "USD" -> "Etats-Unis";
+            case "EUR" -> "Zone euro";
+            case "XOF" -> "Afrique de l'Ouest";
+            case "XAF" -> "Afrique centrale";
+            case "GBP" -> "Royaume-Uni";
+            case "CAD" -> "Canada";
+            case "CHF" -> "Suisse";
+            case "JPY" -> "Japon";
+            default -> "Autre";
+        };
     }
 }

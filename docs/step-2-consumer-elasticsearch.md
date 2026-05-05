@@ -33,8 +33,13 @@ Le consumer accepte un message JSON envoye par le producer, par exemple :
 
 ```json
 {
+  "deviseSource": "USD",
   "devise": "EUR",
+  "nomDevise": "Euro",
+  "zoneMonetaire": "Zone euro",
   "taux": 0.92,
+  "tauxInverse": 1.086957,
+  "montantPour100Usd": 92.00,
   "timestamp": "2026-05-05T10:00:00Z"
 }
 ```
@@ -51,3 +56,21 @@ Chaque message est indexe dans Elasticsearch dans l'index `exchange-rates`.
 6. Creer une visualisation avec le taux par devise dans le temps.
 
 La validation est faite quand les nouveaux messages Kafka apparaissent dans Kibana apres indexation Elasticsearch.
+
+## Idees de dashboard
+
+- Courbe : `Average taux` par `timestamp`, filtre `devise: EUR OR devise: XOF OR devise: XAF`.
+- Bar chart : `Average montantPour100Usd` groupe par `nomDevise.keyword`.
+- Metric : dernier `taux` pour `devise: XOF`.
+- Metric : dernier `taux` pour `devise: XAF`.
+- Data table : `devise`, `nomDevise`, `zoneMonetaire`, `taux`, `tauxInverse`, `montantPour100Usd`.
+
+Les champs utiles pour le dashboard sont :
+
+- `deviseSource` : devise de base, ici `USD`.
+- `devise` : code de la devise cible, par exemple `EUR`, `XOF`, `XAF`.
+- `nomDevise` : libelle lisible, par exemple `Franc CFA BCEAO`.
+- `zoneMonetaire` : zone geographique de la devise.
+- `taux` : montant de devise cible pour 1 USD.
+- `tauxInverse` : valeur inverse du taux.
+- `montantPour100Usd` : conversion directe de 100 USD.
