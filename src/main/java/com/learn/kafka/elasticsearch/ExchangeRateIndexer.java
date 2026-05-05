@@ -1,13 +1,11 @@
 package com.learn.kafka.elasticsearch;
 
-import co.elastic.clients.elasticsearch.ElasticsearchClient;
-import co.elastic.clients.elasticsearch.core.IndexResponse;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClient;
 
-import java.io.IOException;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -16,14 +14,15 @@ import java.util.UUID;
 @Service
 public class ExchangeRateIndexer {
 
-    private final ElasticsearchClient elasticsearchClient;
+    private final RestClient restClient;
     private final ObjectMapper objectMapper;
     private final String indexName;
 
-    public ExchangeRateIndexer(ElasticsearchClient elasticsearchClient,
+    public ExchangeRateIndexer(RestClient.Builder restClientBuilder,
                                ObjectMapper objectMapper,
+                               @Value("${spring.elasticsearch.uris}") String elasticsearchUri,
                                @Value("${exchange.elasticsearch.index}") String indexName) {
-        this.elasticsearchClient = elasticsearchClient;
+        this.restClient = restClientBuilder.baseUrl(elasticsearchUri).build();
         this.objectMapper = objectMapper;
         this.indexName = indexName;
     }
@@ -32,16 +31,13 @@ public class ExchangeRateIndexer {
         Map<String, Object> document = toDocument(kafkaMessage);
         String id = document.getOrDefault("id", UUID.randomUUID().toString()).toString();
 
-        try {
-            IndexResponse response = elasticsearchClient.index(request -> request
-                    .index(indexName)
-                    .id(id)
-                    .document(document)
-            );
-            return response.id();
-        } catch (IOException exception) {
-            throw new IllegalStateException("Unable to index exchange rate in Elasticsearch", exception);
-        }
+        restClient.put()
+                .uri("/{index}/_doc/{id}", indexName, id)
+                .body(document)
+                .retrieve()
+                .toBodilessEntity();
+
+        return id;
     }
 
     private Map<String, Object> toDocument(String kafkaMessage) {
